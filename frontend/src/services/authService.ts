@@ -1,56 +1,163 @@
-import type { User, LoginCredentials, OnboardingData } from '../types/auth';
-import { APP_CONFIG } from '../constants/config';
+import type {
+  User,
+  LoginCredentials,
+  OnboardingData,
+} from "../types/auth";
 
-const MOCK_USER: User = {
-  id: 'usr_101',
-  name: 'Naman Singh',
-  email: 'naman@mailpilot.ai',
-  avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAnrUOQm8k8jikYE4sf7QSzS7WrLw3nZmpTIaTte_9PMS1CZt9_ARkFHu1LLwE7MxAsz35p55B1MN0ukrDN3Mvvx7fTh6S4wa7rYmHoh_N0yZTlDRFnr1Wi1FMh13IYJi1Dbh0k85c7gnxrq6V8XMhDEGZWVKRd2-YdINY872IHeMfnEt5FmMUsYKOVz57jPh_YaNlPfIEXbI32fdU2WYhX_4I0u9pz7XbQtF3yaMTYNSHQkIwFHpmnIw',
-  role: 'Software Engineer',
-  isOnboarded: true,
-  createdAt: '2026-01-15T00:00:00Z',
-};
+const API_BASE_URL = "http://localhost:8000";
+
+interface BackendUser {
+  id: string;
+  name: string;
+  email: string;
+  profile_picture?: string | null;
+  profession?: string | null;
+}
+
+function mapUser(user: BackendUser): User {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    avatarUrl: user.profile_picture || undefined,
+    role: (user.profession as User["role"]) || undefined,
+    isOnboarded: Boolean(user.profession),
+    createdAt: new Date().toISOString(),
+  };
+}
 
 export const authService = {
   async getCurrentUser(): Promise<User | null> {
-    await new Promise((res) => setTimeout(res, APP_CONFIG.mockDelayMs));
-    const storedUser = localStorage.getItem('mailpilot_user');
-    if (storedUser) {
-      try {
-        return JSON.parse(storedUser) as User;
-      } catch {
-        return MOCK_USER;
+    const response = await fetch(
+      `${API_BASE_URL}/api/auth/me`,
+      {
+        method: "GET",
+        credentials: "include",
       }
+    );
+
+    if (response.status === 401) {
+      return null;
     }
-    return MOCK_USER;
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to load session: ${response.status}`
+      );
+    }
+
+    const data: BackendUser = await response.json();
+
+    return mapUser(data);
   },
 
-  async login(credentials: LoginCredentials): Promise<User> {
-    await new Promise((res) => setTimeout(res, APP_CONFIG.mockDelayMs));
-    const user: User = {
-      ...MOCK_USER,
-      email: credentials.email || MOCK_USER.email,
-    };
-    localStorage.setItem('mailpilot_user', JSON.stringify(user));
-    localStorage.setItem('mailpilot_token', 'mock_jwt_token_fastapi_ready');
-    return user;
+  async login(
+    credentials: LoginCredentials
+  ): Promise<User> {
+    const response = await fetch(
+      `${API_BASE_URL}/api/auth/login`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.detail || "Invalid email or password"
+      );
+    }
+
+    return mapUser(data.user);
   },
 
-  async logout(): Promise<void> {
-    await new Promise((res) => setTimeout(res, 200));
-    localStorage.removeItem('mailpilot_user');
-    localStorage.removeItem('mailpilot_token');
+  async register(
+    name: string,
+    email: string,
+    password: string
+  ): Promise<User> {
+    const response = await fetch(
+      `${API_BASE_URL}/api/auth/register`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.detail || "Registration failed"
+      );
+    }
+
+    return mapUser(data.user);
   },
 
-  async updateOnboarding(data: OnboardingData): Promise<User> {
-    await new Promise((res) => setTimeout(res, APP_CONFIG.mockDelayMs));
-    const currentUser = await this.getCurrentUser();
-    const updatedUser: User = {
-      ...(currentUser || MOCK_USER),
-      role: data.role,
-      isOnboarded: true,
-    };
-    localStorage.setItem('mailpilot_user', JSON.stringify(updatedUser));
-    return updatedUser;
+  async loginWithGoogle(): Promise<void> {
+    window.location.href =
+      `${API_BASE_URL}/api/auth/google/login`;
+  },
+
+ async logout(): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/auth/logout`,
+    {
+      method: "POST",
+      credentials: "include",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Logout failed: ${response.status}`
+    );
+  }
+},
+
+  async updateOnboarding(
+    data: OnboardingData
+  ): Promise<User> {
+    const response = await fetch(
+      `${API_BASE_URL}/api/auth/onboarding`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          role: data.role,
+        }),
+      }
+    );
+
+    const resData = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        resData.detail || "Failed to update onboarding role"
+      );
+    }
+
+    return mapUser(resData);
   },
 };

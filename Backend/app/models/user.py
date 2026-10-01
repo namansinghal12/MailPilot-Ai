@@ -1,9 +1,8 @@
 from datetime import datetime
 import uuid
 
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import String, Text, DateTime, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.sql import func
 
 from app.database.base import Base
 
@@ -12,7 +11,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(
-        String,
+        String(36),
         primary_key=True,
         default=lambda: str(uuid.uuid4())
     )
@@ -27,7 +26,21 @@ class User(Base):
         unique=True,
         nullable=False
     )
+    google_id: Mapped[str | None] = mapped_column(
+    String(255),
+    unique=True,
+    nullable=True,
+    )
 
+    google_refresh_token: Mapped[str | None] = mapped_column(
+    Text,
+    nullable=True,
+    )
+
+    password_hash: Mapped[str | None] = mapped_column(
+    Text,
+    nullable=True,
+    )
     profession: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True
@@ -40,16 +53,19 @@ class User(Base):
 
     is_active: Mapped[bool] = mapped_column(
         Boolean,
-        default=True
+        default=True,
+        nullable=False
     )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        server_default=func.now()
+        default=datetime.utcnow,
+        nullable=False
     )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now()
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False
     )
