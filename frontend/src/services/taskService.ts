@@ -1,58 +1,84 @@
 import type { TaskItem, TaskStatus } from '../types/task';
-import { APP_CONFIG } from '../constants/config';
 
-const MOCK_TASKS: TaskItem[] = [
-  {
-    id: 'tsk_1',
-    sourceEmailId: 'em_1',
-    sourceEmailSubject: 'Follow-up: Software Engineer Internship 2026',
-    title: 'Confirm Google Technical Interview Slot',
-    description: 'Select candidate availability before 6:00 PM today for the 45-minute technical round.',
-    priority: 'urgent',
-    status: 'todo',
-    dueDate: 'Today, 6:00 PM',
-    createdAt: new Date().toISOString(),
-    tags: ['Career', 'Google', 'Urgent'],
-  },
-  {
-    id: 'tsk_2',
-    sourceEmailId: 'em_4',
-    sourceEmailSubject: 'Action Required: API Key Rotation Alert',
-    title: 'Rotate Stripe Production Secret API Keys',
-    description: 'Log into Stripe Security Dashboard and update live environment API keys.',
-    priority: 'high',
-    status: 'todo',
-    dueDate: 'In 3 days',
-    createdAt: new Date(Date.now() - 3600 * 1000).toISOString(),
-    tags: ['System', 'Stripe', 'Security'],
-  },
-  {
-    id: 'tsk_3',
-    sourceEmailId: 'em_3',
-    sourceEmailSubject: 'New Features Released: Variables and Dynamic Layouts',
-    title: 'Explore Figma Dynamic Variables Tokens',
-    description: 'Review updated Figma Design System playground file for Code Connect integration.',
-    priority: 'low',
-    status: 'completed',
-    dueDate: 'Tomorrow',
-    createdAt: new Date(Date.now() - 86400 * 1000).toISOString(),
-    tags: ['Design', 'Figma'],
-  },
-];
+const API_BASE_URL = "http://localhost:8000";
+
+interface BackendTask {
+  id: string;
+  user_id: string;
+  email_id?: string | null;
+  title: string;
+  description?: string | null;
+  priority: TaskItem['priority'];
+  status: TaskStatus;
+  deadline?: string | null;
+  completed: boolean;
+  created_at: string;
+}
+
+function mapTask(t: BackendTask): TaskItem {
+  return {
+    id: t.id,
+    sourceEmailId: t.email_id || undefined,
+    title: t.title,
+    description: t.description || '',
+    priority: t.priority,
+    status: t.status,
+    dueDate: t.deadline ? new Date(t.deadline).toLocaleDateString() : 'No deadline',
+    createdAt: t.created_at,
+    tags: ['Inbox', t.priority],
+  };
+}
 
 export const taskService = {
   async getTasks(): Promise<TaskItem[]> {
-    await new Promise((res) => setTimeout(res, APP_CONFIG.mockDelayMs));
-    return [...MOCK_TASKS];
+    const response = await fetch(`${API_BASE_URL}/api/tasks/`, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("AUTH_REQUIRED");
+      }
+      throw new Error(`Failed to fetch tasks: ${response.status}`);
+    }
+
+    const data: BackendTask[] = await response.json();
+    return data.map(mapTask);
   },
 
   async updateTaskStatus(id: string, status: TaskStatus): Promise<TaskItem | null> {
-    await new Promise((res) => setTimeout(res, 200));
-    const task = MOCK_TASKS.find((t) => t.id === id);
-    if (task) {
-      task.status = status;
-      return { ...task };
+    const response = await fetch(`${API_BASE_URL}/api/tasks/${id}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        status,
+        completed: status === 'completed',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update task status: ${response.status}`);
     }
-    return null;
+
+    const data: BackendTask = await response.json();
+    return mapTask(data);
+  },
+
+  async deleteTask(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/api/tasks/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete task: ${response.status}`);
+    }
   },
 };

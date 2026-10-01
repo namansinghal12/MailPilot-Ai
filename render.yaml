@@ -18,6 +18,10 @@ services:
         value: "false"
       - key: CORS_ORIGINS
         value: http://localhost:5173
+      - key: FRONTEND_URL
+        value: http://localhost:5173
+      - key: GOOGLE_REDIRECT_URI
+        value: http://localhost:8000/api/auth/google/callback
 
 databases:
   - name: mailpilot-db

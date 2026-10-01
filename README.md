@@ -19,9 +19,12 @@ Vercel SPA rewrite at [`frontend/vercel.json`](./frontend/vercel.json).
    `https://<backend-host>/health/` returns a healthy status.
 5. Set `CORS_ORIGINS` on the Render service to the exact Vercel origin, such as
    `https://<your-project>.vercel.app` (no trailing slash). Add any custom
-   frontend domains as comma-separated origins, then redeploy the backend.
-6. Set the optional `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and
-   `GEMINI_API_KEY` values in Render if those integrations are needed.
+   frontend domains as comma-separated origins. Also set `FRONTEND_URL` to the
+   primary Vercel origin and `GOOGLE_REDIRECT_URI` to
+   `https://<backend-host>/api/auth/google/callback`, then redeploy the backend.
+6. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Render and register the
+   redirect URI above in Google Cloud if Google sign-in is needed. Set
+   `GEMINI_API_KEY` if AI features are needed.
 
 Render generates `SECRET_KEY` and connects the service to the managed database.
 Do not commit production secrets or a production `.env` file.
@@ -49,8 +52,9 @@ The Vercel rewrite serves the React app for client-side routes such as
 
 ## Current application scope
 
-This deployment publishes the existing project as it is; it does not turn the
-backend scaffolds into a complete production API. The FastAPI app currently
-registers the root and health endpoints only, and several frontend services use
-mock data. Verify the intended live authentication, email, task, and AI flows
-before treating the deployment as a production-ready MailPilot service.
+The backend provides API routes for authentication, email, tasks, dashboard,
+analytics, settings, and AI. Google sign-in and AI features require valid
+provider credentials and callback configuration; this deployment setup does
+not create those credentials. Verify the live authentication, Gmail, and AI
+flows with configured provider accounts before treating the deployment as
+production-ready.

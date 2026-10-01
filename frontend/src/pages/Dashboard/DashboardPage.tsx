@@ -13,12 +13,16 @@ import type { Email } from '../../types/email';
 import { Sparkles, ArrowRight, Send } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+import { useAuth } from '../../hooks/useAuth';
+import { emailService } from '../../services/emailService';
+
 export const DashboardPage: React.FC = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(true);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [draftReplyText, setDraftReplyText] = useState('');
 
+  const { user } = useAuth();
   const { emails, isLoading: isLoadingEmails, toggleStar, archiveEmail } = useEmail();
   const navigate = useNavigate();
 
@@ -40,10 +44,12 @@ export const DashboardPage: React.FC = () => {
 
   const handleOpenDraftReply = async (email: Email) => {
     setSelectedEmail(email);
-    if (email.aiSummary?.recommendedAction) {
-      setDraftReplyText(`Hi ${email.sender.name.split(' ')[0]},\n\nThank you for reaching out regarding "${email.subject}". I have reviewed the details and will proceed with confirming our schedule.\n\nBest regards,\nNaman`);
-    } else {
-      setDraftReplyText('Thank you for your email.');
+    setDraftReplyText('Generating AI draft reply...');
+    try {
+      const draft = await emailService.generateDraftReply(email.id);
+      setDraftReplyText(draft);
+    } catch {
+      setDraftReplyText(`Hi ${email.sender.name.split(' ')[0]},\n\nThank you for reaching out regarding "${email.subject}". I have received your email and will follow up shortly.\n\nBest regards,\n${user?.name || ''}`);
     }
   };
 

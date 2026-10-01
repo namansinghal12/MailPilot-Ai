@@ -1,46 +1,41 @@
-import type{ UserSettings } from '../types/settings';
-import { APP_CONFIG } from '../constants/config';
+import type { UserSettings } from '../types/settings';
 
-const MOCK_SETTINGS: UserSettings = {
-  theme: 'dark',
-  notifications: {
-    emailAlerts: true,
-    highPriorityPush: true,
-    dailyDigest: true,
-    taskReminderTime: '09:00',
-  },
-  aiConfig: {
-    preferredModel: 'gemini-3.5-pro',
-    creativityLevel: 0.7,
-    autoDraftReplies: true,
-    extractTasksAutomatically: true,
-  },
-  account: {
-    name: 'Naman Singh',
-    email: 'naman@mailpilot.ai',
-    timezone: 'America/New_York (EST)',
-  },
-};
+const API_BASE_URL = "http://localhost:8000";
 
 export const settingsService = {
   async getSettings(): Promise<UserSettings> {
-    await new Promise((res) => setTimeout(res, APP_CONFIG.mockDelayMs));
-    const stored = localStorage.getItem('mailpilot_settings');
-    if (stored) {
-      try {
-        return JSON.parse(stored) as UserSettings;
-      } catch {
-        return MOCK_SETTINGS;
+    const response = await fetch(`${API_BASE_URL}/api/settings/`, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error("AUTH_REQUIRED");
       }
+      throw new Error(`Failed to fetch settings: ${response.status}`);
     }
-    return MOCK_SETTINGS;
+
+    return await response.json();
   },
 
   async updateSettings(newSettings: Partial<UserSettings>): Promise<UserSettings> {
-    await new Promise((res) => setTimeout(res, APP_CONFIG.mockDelayMs));
-    const current = await this.getSettings();
-    const updated = { ...current, ...newSettings };
-    localStorage.setItem('mailpilot_settings', JSON.stringify(updated));
-    return updated;
+    const response = await fetch(`${API_BASE_URL}/api/settings/`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newSettings),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update settings: ${response.status}`);
+    }
+
+    return await response.json();
   },
 };
