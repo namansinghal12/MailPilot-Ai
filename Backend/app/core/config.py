@@ -14,17 +14,17 @@ class Settings(BaseSettings):
     # -----------------------------
     APP_NAME: str = "MailPilot AI"
     APP_VERSION: str = "1.0.0"
-    DEBUG: bool = True
+    DEBUG: bool = False
 
     # -----------------------------
     # Database
     # -----------------------------
-    DB_HOST: str
-    DB_PORT: int
-    DB_NAME: str
-    DB_USER: str
-    DB_PASSWORD: str
     DATABASE_URL: str
+
+    # -----------------------------
+    # Cross-origin requests
+    # -----------------------------
+    CORS_ORIGINS: str = "http://localhost:5173"
 
     # -----------------------------
     # Security
@@ -36,23 +36,17 @@ class Settings(BaseSettings):
     # -----------------------------
     # Google OAuth
     # -----------------------------
-        # -----------------------------
-    # Google OAuth
-    # -----------------------------
-    GOOGLE_CLIENT_ID: str
-    GOOGLE_CLIENT_SECRET: str 
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/auth/google/callback"
     FRONTEND_URL: str = "http://localhost:5173"
+
     # -----------------------------
     # Gemini
     # -----------------------------
     GEMINI_API_KEY: str = ""
 
     @field_validator(
-        "DB_HOST",
-        "DB_NAME",
-        "DB_USER",
-        "DB_PASSWORD",
         "DATABASE_URL",
         "SECRET_KEY",
         "GOOGLE_CLIENT_ID",
@@ -72,6 +66,7 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore",
     )
+
 
 @lru_cache
 def get_settings():
